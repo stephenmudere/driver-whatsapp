@@ -2,6 +2,10 @@
 
 namespace Botman\WhatsappDriver;
 
+use BotMan\Drivers\Whatsapp\WhatsappDriver;
+use BotMan\Studio\Providers\StudioServiceProvider;
+use Illuminate\Support\ServiceProvider;
+
 use Illuminate\Support\ServiceProvider;
 
 class WhatsappDriverServiceProvider extends ServiceProvider
