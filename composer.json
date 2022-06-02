@@ -1,18 +1,19 @@
 {
     "name": "botman/driver-whatsapp",
-    "description": "Botman Whatsap api driver for laravel",
-    "keywords": [
-        "stephenmudere",
-        "driver-whatsapp"
-    ],
-    "homepage": "https://github.com/stephenmudere/driver-whatsapp",
     "license": "MIT",
-    "type": "library",
+    "description": "Whatsapp Messenger driver for BotMan",
+    "keywords": [
+        "Bot",
+        "BotMan",
+        "Whatsapp Messenger",
+        "Whatsapp",
+        "Messenger"
+    ],
+    "homepage": "http://github.com/botman/driver-whatsapp",
     "authors": [
         {
-            "name": "Stephen Mudere",
-            "email": "muderesteph@gmail.com",
-            "role": "Developer"
+            "name": "Marcel Pociot",
+            "email": "m.pociot@gmail.com"
         }
     ],
     "require": {
@@ -28,30 +29,26 @@
     },
     "autoload": {
         "psr-4": {
-            "Botman\\WhatsappDriver\\": "src"
+            "BotMan\\Drivers\\Whatsapp\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Botman\\WhatsappDriver\\Tests\\": "tests"
+            "Tests\\": "tests/"
         }
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
-        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
-
-    },
-    "config": {
-        "sort-packages": true
+        "cs": "php-cs-fixer fix"
     },
     "extra": {
+        "branch-alias": {
+            "dev-master": "2.0-dev"
+        },
         "laravel": {
             "providers": [
-                "Botman\\WhatsappDriver\\WhatsappDriverServiceProvider"
-            ],
-            "aliases": {
-                "WhatsappDriver": "Botman\\WhatsappDriver\\WhatsappDriverFacade"
-            }
+                "BotMan\\Drivers\\Whatsapp\\Providers\\WhatsappServiceProvider"
+            ]
         }
     }
 }

@@ -1,0 +1,20 @@
+{
+    "botman/driver-config": [
+        "stubs/whatsapp.php"
+    ],
+    "botman/driver": [
+        "BotMan\\Drivers\\Whatsapp\\WhatsappDriver",
+        "BotMan\\Drivers\\Whatsapp\\WhatsappAudioDriver",
+        "BotMan\\Drivers\\Whatsapp\\WhatsappFileDriver",
+        "BotMan\\Drivers\\Whatsapp\\WhatsappImageDriver",
+        "BotMan\\Drivers\\Whatsapp\\WhatsappLocationDriver",
+        "BotMan\\Drivers\\Whatsapp\\WhatsappVideoDriver"
+    ],
+    "botman/commands": [
+        "BotMan\\Drivers\\Whatsapp\\Commands\\AddPersistentMenu",
+        "BotMan\\Drivers\\Whatsapp\\Commands\\AddStartButtonPayload",
+        "BotMan\\Drivers\\Whatsapp\\Commands\\AddGreetingText",
+        "BotMan\\Drivers\\Whatsapp\\Commands\\WhitelistDomains",
+        "BotMan\\Drivers\\Whatsapp\\Commands\\Nlp"
+    ]
+}

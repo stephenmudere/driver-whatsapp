@@ -1,52 +1,21 @@
-# Very short description of the package
+# BotMan Whatsapp Messenger Driver
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/stephenmudere/driver-whatsapp.svg?style=flat-square)](https://packagist.org/packages/stephenmudere/driver-whatsapp)
-[![Total Downloads](https://img.shields.io/packagist/dt/stephenmudere/driver-whatsapp.svg?style=flat-square)](https://packagist.org/packages/stephenmudere/driver-whatsapp)
-![GitHub Actions](https://github.com/stephenmudere/driver-whatsapp/actions/workflows/main.yml/badge.svg)
+BotMan driver to connect Whatsapp messenger with [BotMan](https://github.com/botman/botman)
 
-This is where your description should go. Try and limit it to a paragraph or two, and maybe throw in a mention of what PSRs you support to avoid any confusion with users and contributors.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/botman/driver-whatsapp.svg?style=flat-square)](https://packagist.org/packages/botman/driver-whatsapp)
+[![Build Status](https://travis-ci.org/botman/driver-whatsapp.svg?branch=master)](https://travis-ci.org/botman/driver-whatsapp)
+[![codecov](https://codecov.io/gh/botman/driver-whatsapp/branch/master/graph/badge.svg)](https://codecov.io/gh/botman/driver-whatsapp)
 
-## Installation
-
-You can install the package via composer:
-
-```bash
-composer require stephenmudere/driver-whatsapp
-```
-
-## Usage
-
-```php
-// Usage description here
-```
-
-### Testing
-
-```bash
-composer test
-```
-
-### Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information what has changed recently.
 
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### Security
+## Security Vulnerabilities
 
-If you discover any security related issues, please email muderesteph@gmail.com instead of using the issue tracker.
-
-## Credits
-
--   [Stephen Mudere](https://github.com/stephenmudere)
--   [All Contributors](../../contributors)
+If you discover a security vulnerability within BotMan, please send an e-mail to Marcel Pociot at m.pociot@gmail.com. All security vulnerabilities will be promptly addressed.
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
-
-## Laravel Package Boilerplate
-
-This package was generated using the [Laravel Package Boilerplate](https://laravelpackageboilerplate.com).
+BotMan is free software distributed under the terms of the MIT license.
+ 
