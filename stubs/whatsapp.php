@@ -9,4 +9,6 @@ return [
 
    'bearer_token'=>env("WHATSAPP_BEARER_TOKEN_HERE"),
 
+   'verification'=>env("WHATSAPP_VERIFICATION"),
+
 ];
