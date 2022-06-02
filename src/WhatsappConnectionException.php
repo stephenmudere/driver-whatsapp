@@ -1,6 +1,6 @@
 <?php
 
-namespace BotMan\Drivers\Whatsapp;
+namespace Botman\WhatsappDriver;
 
 use BotMan\BotMan\Exceptions\Base\DriverException;
 

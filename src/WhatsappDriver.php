@@ -1,6 +1,6 @@
 <?php
 
-namespace BotMan\Drivers\Whatsapp;
+namespace Botman\WhatsappDriver;
 
 use BotMan\BotMan\Drivers\HttpDriver;
 use BotMan\BotMan\Interfaces\UserInterface;
