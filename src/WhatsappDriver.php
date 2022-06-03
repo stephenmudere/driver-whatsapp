@@ -34,6 +34,7 @@ use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Log;
 
 class WhatsappDriver extends HttpDriver implements VerifiesService
 {
@@ -88,6 +89,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      */
     public function buildPayload(Request $request)
     {
+        Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
         $this->payload = new ParameterBag((array) json_decode($request->getContent(), true));
         $this->event = Collection::make((array) $this->payload->get('entry', [null])[0]);
         $this->signature = $request->headers->get('X_HUB_SIGNATURE', '');
@@ -102,12 +104,10 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      */
     public function matchesRequest()
     {
+        Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
         $validSignature = empty($this->config->get('app_secret')) || $this->validateSignature();
-        $messages = Collection::make($this->event->get('messaging'))->filter(function ($msg) {
-            return (isset($msg['message']['text']) || isset($msg['postback']['payload'])) && ! isset($msg['message']['is_echo']);
-        });
 
-        return ! $messages->isEmpty() && $validSignature;
+        return (!is_null($this->payload->get('contacts')) || !is_null($this->event->get('from'))) && $validSignature;
     }
 
     /**
@@ -247,54 +247,27 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
         return Answer::create($message->getText())->setMessage($message);
     }
 
-    /**
-     * Retrieve the chat message.
+   /**
+     * Retrieve the chat message(s).
      *
      * @return array
      */
     public function getMessages()
     {
+        Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
         if (empty($this->messages)) {
-            $this->loadMessages();
+            $this->messages = [
+                new IncomingMessage(
+                    $this->event->get('text')['body'],
+                    $this->event->get('from'),
+                    $this->event->get('from'),
+                    $this->payload
+                )
+            ];
         }
 
         return $this->messages;
     }
-
-    /**
-     * Load Whatsapp messages.
-     */
-    protected function loadMessages()
-    {
-        $messages = Collection::make($this->event->get('messaging'));
-        $messages = $messages->transform(function ($msg) {
-            $message = new IncomingMessage('', $this->getMessageSender($msg), $this->getMessageRecipient($msg), $msg);
-            if (isset($msg['message']['text']) && ! isset($msg['message']['quick_reply']['payload'])) {
-                $message->setText($msg['message']['text']);
-
-                if (isset($msg['message']['nlp'])) {
-                    $message->addExtras('nlp', $msg['message']['nlp']);
-                }
-            } elseif (isset($msg['postback']['payload'])) {
-                $this->isPostback = true;
-
-                $message->setText($msg['postback']['payload']);
-            } elseif (isset($msg['message']['quick_reply']['payload'])) {
-                $this->isPostback = true;
-
-                $message->setText($msg['message']['quick_reply']['payload']);
-            }
-
-            return $message;
-        })->toArray();
-
-        if (count($messages) === 0) {
-            $messages = [new IncomingMessage('', '', '')];
-        }
-
-        $this->messages = $messages;
-    }
-
     /**
      * @return bool
      */
@@ -455,28 +428,17 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      * @return User
      * @throws WhatsappException
      */
-    public function getUser(IncomingMessage $matchingMessage)
+     public function getUser(IncomingMessage $matchingMessage)
     {
-        $messagingDetails = $this->event->get('messaging')[0];
-
-        // field string available at Whatsapp
-        $fields = 'name,first_name,last_name,profile_pic';
-
-        // WORKPLACE (Whatsapp for companies)
-        // if community isset in sender Object, it is a request done by workplace
-        if (isset($messagingDetails['sender']['community'])) {
-            $fields = 'first_name,last_name,email,title,department,employee_number,primary_phone,primary_address,picture,link,locale,name,name_format,updated_time';
-        }
-
-        $userInfoData = $this->http->get($this->whatsappProfileEndpoint.$matchingMessage->getSender().'?fields='.$fields.'&access_token='.$this->config->get('token'));
-
-        $this->throwExceptionIfResponseNotOk($userInfoData);
-        $userInfo = json_decode($userInfoData->getContent(), true);
-
-        $firstName = $userInfo['first_name'] ?? null;
-        $lastName = $userInfo['last_name'] ?? null;
-
-        return new User($matchingMessage->getSender(), $firstName, $lastName, null, $userInfo);
+        Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
+        $contact = Collection::make($matchingMessage->getPayload()->get('contacts')[0]);
+        return new User(
+            $contact->get('wa_id'),
+            $contact->get('profile')['name'],
+            null,
+            $contact->get('wa_id'),
+            $contact
+        );
     }
 
     /**
