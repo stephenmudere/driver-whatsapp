@@ -299,7 +299,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                 foreach ($mssg["value"]["messages"] as $mvkey => $msg) {
                     //dd($msg);
                     if (isset($msg['text']['body']) && isset($msg['type'])&&"text"==$msg['type']) {
-                   $message = new IncomingMessage('', $this->getMessageSender($msg), $this->getMessageRecipient($msg), $msg);
+                   $message = new IncomingMessage('', $this->getMessageSender($msg), $this->getMessageRecipient($msg), $mssg["value"]);
                    //dd($msg);
                     
                         $message->setText($msg['text']['body']);
@@ -474,12 +474,14 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
     {
         //dd($matchingMessage);
         Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
-        $contact = Collection::make($matchingMessage->getPayload()->get('contacts')[0]);
+        Log::channel('tracker')->info( "  method  " );
+        //dd($matchingMessage->getPayload());
+        $contact = $matchingMessage->getPayload()['contacts'][0];
         return new User(
-            $contact->get('wa_id'),
-            $contact->get('profile')['name'],
+            $contact['wa_id'],
+            $contact['profile']['name'],
             null,
-            $contact->get('wa_id'),
+            $contact['wa_id'],
             $contact
         );
     }
