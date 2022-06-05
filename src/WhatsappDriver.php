@@ -40,7 +40,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
 {
     const HANDOVER_INBOX_PAGE_ID = '263902037430900';
 
-    const TYPE_RESPONSE = 'RESPONSE';
+    const TYPE_RESPONSE = 'whatsapp';
     const TYPE_UPDATE = 'UPDATE';
     const TYPE_MESSAGE_TAG = 'MESSAGE_TAG';
 
@@ -52,6 +52,8 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
 
     /** @var array */
     protected $messages = [];
+
+    protected $endpoint = 'messages';
 
     /** @var array */
     protected $templates = [
@@ -95,6 +97,11 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
         $this->signature = $request->headers->get('X_HUB_SIGNATURE', '');
         $this->content = $request->getContent();
         $this->config = Collection::make($this->config->get('whatsapp', []));
+
+        Log::channel('tracker')->info("content ".print_r($this->content,1));
+        Log::channel('tracker')->info("payload ".print_r($this->payload,1));
+        Log::channel('tracker')->info("event ".print_r($this->event,1));
+        //Log::channel('tracker')->info("config ".print_r($this->config,1));
     }
 
     /**
@@ -106,8 +113,8 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
     {
         Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
         $validSignature = empty($this->config->get('app_secret')) || $this->validateSignature();
-
-        return (!is_null($this->payload->get('contacts')) || !is_null($this->event->get('from'))) && $validSignature;
+         Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ . " result ".(!is_null($this->payload->get('object'))&&'whatsapp_business_account'==$this->payload->get('object'))); 
+        return (!is_null($this->payload->get('object'))&&'whatsapp_business_account'==$this->payload->get('object'));
     }
 
     /**
@@ -207,7 +214,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
             'recipient' => [
                 'id' => $matchingMessage->getSender(),
             ],
-            'access_token' => $this->config->get('token'),
+            //'access_token' => $this->config->get('token'),
             'sender_action' => 'mark_seen',
         ];
 
@@ -224,7 +231,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
             'recipient' => [
                 'id' => $matchingMessage->getSender(),
             ],
-            'access_token' => $this->config->get('token'),
+            //'access_token' => $this->config->get('token'),
             'sender_action' => 'typing_on',
         ];
 
@@ -255,19 +262,75 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
     public function getMessages()
     {
         Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
-        if (empty($this->messages)) {
-            $this->messages = [
-                new IncomingMessage(
-                    $this->event->get('text')['body'],
-                    $this->event->get('from'),
-                    $this->event->get('from'),
-                    $this->payload
-                )
-            ];
-        }
+        //dd($this->event->get('changes'));
+        $this->loadMessages();
+        // $changes=$this->event->get('changes');
+        // if (empty($this->messages)) {
+        //     if (isset($changes[0]['value']['body']['messages'][0]['type'])&&"text"==$changes[0]['value']['body']['messages'][0]['type']) {
+           
+        //     $this->messages = [
+        //         new IncomingMessage(
+        //             $changes[0]['value']['body']['messages'][0]['text']['body'],
+        //             $changes[0]['value']['body']['messages'][0]['from'],
+        //             $changes[0]['value']['body']['messages'][0]['from'],
+        //             $this->payload
+        //         )
+        //     ];
+
+        //   }
+        // }
+
+       // dd($this->messages);
 
         return $this->messages;
     }
+
+
+    /**
+     * Load Facebook messages.
+     */
+    protected function loadMessages()
+    {
+        $col= Collection::make($this->event->get('changes'));
+        $messages =[];
+        foreach ($col as $mkey => $mssg) {
+            //dd($msg["value"]["messages"]);
+            if (isset($mssg["value"]["messages"])) {
+                foreach ($mssg["value"]["messages"] as $mvkey => $msg) {
+                    //dd($msg);
+                    if (isset($msg['text']['body']) && isset($msg['type'])&&"text"==$msg['type']) {
+                   $message = new IncomingMessage('', $this->getMessageSender($msg), $this->getMessageRecipient($msg), $msg);
+                   //dd($msg);
+                    
+                        $message->setText($msg['text']['body']);
+                        $messages[]= $message;
+                        // if (isset($msg['message']['nlp'])) {
+                        //     $message->addExtras('nlp', $msg['message']['nlp']);
+                        // }
+                    }
+                    // elseif (isset($msg['postback']['payload'])) {
+                    //     $this->isPostback = true;
+
+                    //     $message->setText($msg['postback']['payload']);
+                    // } elseif (isset($msg['message']['quick_reply']['payload'])) {
+                    //     $this->isPostback = true;
+
+                    //     $message->setText($msg['message']['quick_reply']['payload']);
+                    // }
+
+                }
+            }
+            
+            
+        }
+
+        if (count($messages) === 0) {
+            $messages = [new IncomingMessage('', '', '')];
+        }
+        
+        $this->messages = $messages;
+    }
+
     /**
      * @return bool
      */
@@ -336,11 +399,27 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
         } else {
             $recipient = ['id' => $matchingMessage->getSender()];
         }
+        //{ \"messaging_product\": \"whatsapp\", \"to\": \"263771943215\", \"type\": \"template\", \"template\": { \"name\": \"hello_world\", \"language\": { \"code\": \"en_US\" } } }
+        // $parameters = array_merge_recursive([
+        //     'messaging_product' => self::TYPE_RESPONSE,
+        //     'preview_url' => true,
+        //     'to' => $matchingMessage->getSender(),
+        //     'type'=>"text",
+        //     'text' => [
+        //         'body' => $message,
+        //     ],
+        // ], $additionalParameters);
         $parameters = array_merge_recursive([
-            'messaging_type' => self::TYPE_RESPONSE,
-            'recipient' => $recipient,
-            'message' => [
-                'text' => $message,
+            'messaging_product' => self::TYPE_RESPONSE,
+            // 'preview_url' => true,
+            'to' => $matchingMessage->getSender(),
+            'type'=>"template",
+            'template' => [
+                //'name' => $message,
+                'name' => 'hello_world',
+                'language'=>[
+                   'code'=>"en_US"
+                ]
             ],
         ], $additionalParameters);
         /*
@@ -364,62 +443,25 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                     ],
                 ];
             } else {
-                $parameters['message']['text'] = $message->getText();
+               // $parameters['text']['body'] = $message->getText();
             }
         }
 
-        $parameters['access_token'] = $this->config->get('token');
+        //$parameters['access_token'] = $this->config->get('token');
 
         return $parameters;
     }
 
-    /**
-     * @param mixed $payload
-     * @return Response
-     * @throws WhatsappException
-     */
-    public function sendPayload($payload)
-    {
-        $response = $this->http->post($this->whatsappProfileEndpoint.'me/messages', [], $payload);
-        $this->throwExceptionIfResponseNotOk($response);
 
-        return $response;
-    }
 
     /**
      * @return bool
      */
     public function isConfigured()
     {
-        return ! empty($this->config->get('token'));
+        return ! empty($this->config->get('bearer_token'));
     }
 
-    /**
-     * Retrieve specific User field information.
-     *
-     * @param array $fields
-     * @param IncomingMessage $matchingMessage
-     * @return User
-     * @throws WhatsappException
-     */
-    public function getUserWithFields(array $fields, IncomingMessage $matchingMessage)
-    {
-        $messagingDetails = $this->event->get('messaging')[0];
-        // implode field array to create concatinated comma string
-        $fields = implode(',', $fields);
-        // WORKPLACE (Whatsapp for companies)
-        // if community isset in sender Object, it is a request done by workplace
-        if (isset($messagingDetails['sender']['community'])) {
-            $fields = 'first_name,last_name,email,title,department,employee_number,primary_phone,primary_address,picture,link,locale,name,name_format,updated_time';
-        }
-        $userInfoData = $this->http->get($this->whatsappProfileEndpoint.$matchingMessage->getSender().'?fields='.$fields.'&access_token='.$this->config->get('token'));
-        $this->throwExceptionIfResponseNotOk($userInfoData);
-        $userInfo = json_decode($userInfoData->getContent(), true);
-        $firstName = $userInfo['first_name'] ?? null;
-        $lastName = $userInfo['last_name'] ?? null;
-
-        return new User($matchingMessage->getSender(), $firstName, $lastName, null, $userInfo);
-    }
 
     /**
      * Retrieve User information.
@@ -430,6 +472,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      */
      public function getUser(IncomingMessage $matchingMessage)
     {
+        //dd($matchingMessage);
         Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
         $contact = Collection::make($matchingMessage->getPayload()->get('contacts')[0]);
         return new User(
@@ -441,22 +484,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
         );
     }
 
-    /**
-     * Low-level method to perform driver specific API requests.
-     *
-     * @param string $endpoint
-     * @param array $parameters
-     * @param IncomingMessage $matchingMessage
-     * @return Response
-     */
-    public function sendRequest($endpoint, array $parameters, IncomingMessage $matchingMessage)
-    {
-        $parameters = array_replace_recursive([
-            'access_token' => $this->config->get('token'),
-        ], $parameters);
 
-        return $this->http->post($this->whatsappProfileEndpoint.$endpoint, [], $parameters);
-    }
 
     /**
      * @return string
@@ -485,10 +513,8 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      */
     protected function getMessageSender($msg)
     {
-        if (isset($msg['sender'])) {
-            return $msg['sender']['id'];
-        } elseif (isset($msg['optin'])) {
-            return $msg['optin']['user_ref'];
+        if (isset($msg['from'])) {
+            return $msg['from'];
         }
     }
 
@@ -498,25 +524,110 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
      */
     protected function getMessageRecipient($msg)
     {
-        if (isset($msg['recipient'])) {
-            return $msg['recipient']['id'];
+        if (isset($msg['from'])) {
+            return $msg['from'];
         }
     }
 
+
     /**
-     * Pass a conversation to the page inbox.
+     * Low-level method to perform driver specific API requests.
      *
-     * @param IncomingMessage $message
-     * @param $bot
+     * @param string $endpoint
+     * @param array $parameters
+     * @param \BotMan\BotMan\Messages\Incoming\IncomingMessage $matchingMessage
+     * @return void
+     */
+    public function sendRequest($endpoint, array $parameters, IncomingMessage $matchingMessage)
+    {
+        $parameters = array_replace_recursive([
+            'to' => $matchingMessage->getRecipient(),
+        ], $parameters);
+
+        if ($this->config->get('throw_http_exceptions')) {
+            return $this->postWithExceptionHandling($this->buildApiUrl($endpoint), [], $parameters, $this->buildAuthHeader());
+        }
+
+        return $this->http->post($this->buildApiUrl($endpoint), [], $parameters, $this->buildAuthHeader());
+    }
+
+    protected function buildApiUrl($endpoint)
+    {
+        return "https://graph.facebook.com/v13.0/".$this->config->get('phone_no_id') . '/' . $endpoint;
+    }
+
+    protected function buildAuthHeader()
+    {
+        // TODO: Token should from DB & Re-Fetch before expired
+        // TODO: Should create Artisan command + Scheduler
+        $token = $this->config->get('bearer_token');
+
+        return [
+            "Authorization: Bearer $token",
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ];
+    }
+
+    /**
+     * @param $url
+     * @param array $urlParameters
+     * @param array $postParameters
+     * @param array $headers
+     * @param bool $asJSON
+     * @param int $retryCount
+     * @return Response
+     * @throws \Modules\ChatBot\Drivers\Whatsapp\WhatsappConnectionException
+     */
+    private function postWithExceptionHandling(
+        $url,
+        array $urlParameters = [],
+        array $postParameters = [],
+        array $headers = [],
+        $asJSON = false,
+        int $retryCount = 0
+    ) {
+        Log::channel('tracker')->info( __CLASS__."  method  ".__METHOD__ );
+        Log::channel('tracker')->info(  "  url  ".$url );
+        Log::channel('tracker')->info(  "  urlParameters  ".print_r( $urlParameters ,1 ));
+        Log::channel('tracker')->info(  "  postParameters  ".print_r( $postParameters ,1 ) );
+        Log::channel('tracker')->info(  "  headers  ".print_r( $headers ,1 ) );
+        $response = $this->http->post($url, $urlParameters, $postParameters, $headers, $asJSON);
+        $responseData = json_decode($response->getContent(), true);
+        //dd($responseData);
+        Log::channel('tracker')->info(  "  responseData  ".print_r( $responseData ,1 ) );
+        if ($response->isSuccessful()) {
+            return $responseData;
+        }
+
+        $responseData['error']['code'] = $responseData['errors']['code'] ?? 'No description from Vendor';
+        $responseData['error']['message'] = $responseData['errors']['title'] ?? 'No error code from Vendor';
+
+        $message = "Status Code: {$response->getStatusCode()}\n".
+            "Description: ".print_r($responseData['error']['message'], true)."\n".
+            "Error Code: ".print_r($responseData['error']['code'], true)."\n".
+            "URL: $url\n".
+            "URL Parameters: ".print_r($urlParameters, true)."\n".
+            "Post Parameters: ".print_r($postParameters, true)."\n".
+            "Headers: ". print_r($headers, true)."\n";
+
+        throw new WhatsappException($message);
+    }
+
+
+    /**
+     * @param mixed $payload
      * @return Response
      */
-    public function handover(IncomingMessage $message, $bot)
+    public function sendPayload($payload)
     {
-        return $this->http->post($this->whatsappProfileEndpoint.'me/pass_thread_control?access_token='.$this->config->get('token'), [], [
-            'recipient' => [
-                'id' => $message->getSender(),
-            ],
-            'target_app_id' => self::HANDOVER_INBOX_PAGE_ID,
-        ]);
+        //dd($payload);
+        if ($this->config->get('throw_http_exceptions')) {
+            return $this->postWithExceptionHandling($this->buildApiUrl($this->endpoint), [], $payload, $this->buildAuthHeader(), true);
     }
+
+        return $this->http->post($this->buildApiUrl($this->endpoint), [], $payload, $this->buildAuthHeader(), true);
+    }
+
+
 }
