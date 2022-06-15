@@ -35,6 +35,8 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Log;
+use BotMan\Drivers\Whatsapp\Messages\Template;
+
 
 class WhatsappDriver extends HttpDriver implements VerifiesService
 {
@@ -368,6 +370,44 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                 }
 
                 return array_merge([
+                    'type' => 'reply',
+                    'reply'=>['title' => $button['text'] ?? $button['title'],
+                    'id' => $button['value'] ?? $button['payload']]
+                ], $button['additional'] ?? []);
+            });
+        if (count($replies->toArray())>0) {
+             return [
+                "type"=> "button",
+                'body'=>['text' => $questionData['text']],
+                "action"=>['buttons' => $replies->toArray()],
+            ];
+        }else{
+             return [
+                "type"=> "text",
+                'body'=>['text' => $questionData['text']],
+            ];
+        }
+       
+    }
+
+     /**
+     * Convert a Question object into a valid Whatsapp
+     * quick reply response object.
+     *
+     * @param Question $question
+     * @return array
+     */
+    private function convertTemplate(Template $question)
+    {
+        $questionData = $question->toArray();
+        //dd($questionData);
+        $replies = Collection::make($question->getButtons())
+            ->map(function ($button) {
+                if (isset($button['content_type']) && $button['content_type'] !== 'text') {
+                    return ['content_type' => $button['content_type']];
+                }
+
+                return array_merge([
                     'content_type' => 'text',
                     'title' => $button['text'] ?? $button['title'],
                     'payload' => $button['value'] ?? $button['payload'],
@@ -376,10 +416,12 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
             });
 
         return [
-            'text' => $questionData['text'],
+            'template' => $questionData['template'],
             'quick_replies' => $replies->toArray(),
+            'components'=>$questionData['components']
         ];
     }
+
 
     /**
      * @param string|Question|IncomingMessage $message
@@ -422,12 +464,33 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                 ]
             ],
         ], $additionalParameters);
+
+
+
         /*
          * If we send a Question with buttons, ignore
          * the text and append the question.
          */
-        if ($message instanceof Question) {
-            $parameters['message'] = $this->convertQuestion($message);
+        if ($message instanceof Template) {
+            $template = $this->convertTemplate($message);
+            //dd($template);
+            $parameters['type'] ="template";
+            $parameters['template']['name'] = $template['template'];
+            $parameters['template']['language']=['code'=>"en_US"];
+            $parameters['template']['components']=$template['components'];
+            //dd($parameters);
+            //dd($parameters['message']);
+        } elseif ($message instanceof Question) {
+            unset($parameters['template']);
+            $question=$this->convertQuestion($message);
+            if ($question['type']=='button') {
+               $parameters['type'] ="interactive";
+               $parameters['interactive'] = $question;
+            }elseif ($question['type']=='text') {
+               $parameters['type'] ="text";
+               $parameters['text']['body'] = $question['body'];
+            }
+            
         } elseif (is_object($message) && in_array(get_class($message), $this->templates)) {
             $parameters['message'] = $message->toArray();
         } elseif ($message instanceof OutgoingMessage) {
@@ -446,6 +509,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                // $parameters['text']['body'] = $message->getText();
             }
         }
+        //dd($parameters);
 
         //$parameters['access_token'] = $this->config->get('token');
 
@@ -594,6 +658,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
         Log::channel('tracker')->info(  "  urlParameters  ".print_r( $urlParameters ,1 ));
         Log::channel('tracker')->info(  "  postParameters  ".print_r( $postParameters ,1 ) );
         Log::channel('tracker')->info(  "  headers  ".print_r( $headers ,1 ) );
+        Log::channel('tracker')->info(  "  postParametersjson  ".print_r( json_encode($postParameters) ,1 ) );
         $response = $this->http->post($url, $urlParameters, $postParameters, $headers, $asJSON);
         $responseData = json_decode($response->getContent(), true);
         //dd($responseData);
