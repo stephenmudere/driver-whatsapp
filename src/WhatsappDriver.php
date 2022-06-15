@@ -488,7 +488,7 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                $parameters['interactive'] = $question;
             }elseif ($question['type']=='text') {
                $parameters['type'] ="text";
-               $parameters['text']['body'] = $question['body'];
+               $parameters['text']['body'] = $question['body']['text' ];
             }
             
         } elseif (is_object($message) && in_array(get_class($message), $this->templates)) {
