@@ -506,7 +506,9 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                     ],
                 ];
             } else {
-               // $parameters['text']['body'] = $message->getText();
+               unset($parameters['template']);
+               $parameters['type'] ="text";
+               $parameters['text']['body'] = $message->getText();
             }
         }
         //dd($parameters);
