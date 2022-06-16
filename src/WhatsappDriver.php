@@ -501,6 +501,9 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                 unset($parameters['template']);
                 $parameters['type']=$attachmentType;
                 $parameters[$attachmentType]=['link'=>$attachment->getUrl(),'caption'=>$message->getText()];
+                if ("file"==$attachmentType) {
+                   unset($parameters[$attachmentType]['caption']);
+                }
                 // $parameters['message']['attachment'] = [
                 //     'type' => $attachmentType,
                 //     'payload' => [
