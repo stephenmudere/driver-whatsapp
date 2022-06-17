@@ -502,13 +502,8 @@ class WhatsappDriver extends HttpDriver implements VerifiesService
                
                 if ("file"==$attachmentType) {
                    //unset($parameters[$attachmentType]['caption']);
-                   if (strpos($attachment->getUrl(), ".pdf")!==false) {
-                       $parameters['type']="image";
-                       $parameters["image"]=['link'=>$attachment->getUrl(),'caption'=>$message->getText()];
-                   }else{
-                       $parameters['type']="document";
-                       $parameters["document"]=['link'=>$attachment->getUrl(),'caption'=>$message->getText()];
-                   }
+                   $parameters['type']="document";
+                   $parameters["document"]=['link'=>$attachment->getUrl(),'caption'=>$message->getText()];
                 }else{
                     $parameters['type']=$attachmentType;
                     $parameters[$attachmentType]=['link'=>$attachment->getUrl(),'caption'=>$message->getText()];
